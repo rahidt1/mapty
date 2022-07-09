@@ -62,6 +62,7 @@ const inputDistance = document.querySelector('.form__input--distance');
 const inputDuration = document.querySelector('.form__input--duration');
 const inputCadence = document.querySelector('.form__input--cadence');
 const inputElevation = document.querySelector('.form__input--elevation');
+const reset = document.querySelector('.reset');
 
 class App {
   #map;
@@ -70,10 +71,17 @@ class App {
   #workout = [];
 
   constructor() {
+    // Get user's postion
     this._getPostition();
+
+    // Get data from local storage
+    this._getLocalStorage();
+
+    // Event Handlers
     form.addEventListener('submit', this._newWorkout.bind(this));
     inputType.addEventListener('change', this._toggleElevationField);
     containerWorkouts.addEventListener('click', this._moveToPopup.bind(this));
+    reset.addEventListener('click', this.reset);
   }
 
   // Get position from GPS
@@ -102,13 +110,19 @@ class App {
 
     // Handling click on map
     this.#map.on('click', this._showForm.bind(this));
+
+    // Render marker from local storage
+    // See explanation at _getLocalStorage() method
+    this.#workout.forEach(work => this._renderWorkoutMarker(work));
   }
 
-  // Show form
+  // Show form + reset button
   _showForm(mapE) {
     this.#mapEvent = mapE;
     form.classList.remove('hidden');
     inputDistance.focus();
+
+    reset.classList.remove('hidden');
   }
   // Hide form
   _hideForm() {
@@ -197,6 +211,9 @@ class App {
 
     // Hide form + Clear input fields
     this._hideForm();
+
+    // Set local storage to all workouts
+    this._setLocalStorage();
   }
   _renderWorkoutMarker(workout) {
     L.marker(workout.coords)
@@ -282,8 +299,39 @@ class App {
     });
 
     // Using public interface
-    workout.click();
-    // console.log(workout);
+    // workout.click();
+  }
+  _setLocalStorage() {
+    localStorage.setItem('workouts', JSON.stringify(this.#workout));
+  }
+  _getLocalStorage() {
+    const data = JSON.parse(localStorage.getItem('workouts'));
+
+    if (!data) return;
+    // Reset button should be added if there is data during page load, unless it should be hidden
+    reset.classList.remove('hidden');
+
+    this.#workout = data;
+
+    this.#workout.forEach(work => {
+      this._renderWorkoutList(work);
+      // Cant use, this.#map still not available
+      // this._renderWorkoutMarker(work)
+
+      // (👆) We cant directly render map marker, because we need leaflet map object (this.#map)
+      // But we are handling _getLocalStorage() event when page loads, that means we defined it in App's constructor
+      // That time this.#map is not loaded still, because it takes time to first get the geolocation and render the map, thats why we cant access it, so we cant call _renderWorkoutMarker()
+      // For this we can call _renderWorkoutMarker() with a delay to give time to load the map (my solution)
+      // Or we render the marker on map when map loads, that means in _loadMap() method (Jonas's solution)
+
+      // setTimeout(() => this._renderWorkoutMarker(work), 1000);
+    });
+  }
+
+  // Remove workout from local storage
+  reset() {
+    localStorage.removeItem('workouts');
+    location.reload();
   }
 }
 

@@ -60,6 +60,9 @@ a:visited {
   height: 77vh;
   overflow-y: scroll;
   overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
 }
 .reset {
   background-color: var(--color-dark--2);
@@ -67,16 +70,18 @@ a:visited {
   border: none;
   cursor: pointer;
   border-radius: 5px;
-  margin-bottom: 1.5rem;
+  /* margin-bottom: 1.5rem; */
   font-family: 'Manrope', sans-serif;
   color: var(--color-light--2);
   font-weight: 600;
   font-size: 1.5rem;
   letter-spacing: 0.7px;
-  position: relative;
-  left: 313px;
+
+  align-self: flex-end;
+
   transition: all 0.5s, transform 1ms;
 }
+
 .reset.hidden {
   opacity: 0;
 }
@@ -84,12 +89,15 @@ a:visited {
 .workouts::-webkit-scrollbar {
   width: 0;
 }
+.workouts {
+  /* for firefox scroll hide */
+  scrollbar-width: none;
+}
 
 .workout {
   background-color: var(--color-dark--2);
   border-radius: 5px;
   padding: 1.5rem 2.25rem;
-  margin-bottom: 1.75rem;
   cursor: pointer;
 
   display: grid;
@@ -139,7 +147,6 @@ a:visited {
   background-color: var(--color-dark--2);
   border-radius: 5px;
   padding: 1.5rem 2.75rem;
-  margin-bottom: 1.75rem;
 
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -147,14 +154,14 @@ a:visited {
 
   /* Match height and activity boxes */
   height: 9.25rem;
-  transition: all 0.5s, transform 1ms;
+  transition: all 0.4s, transform 1ms;
 }
 
 .form.hidden {
   transform: translateY(-30rem);
   height: 0;
   padding: 0 2.25rem;
-  margin-bottom: 0;
+  margin-bottom: -1.5rem;
   opacity: 0;
 }
 

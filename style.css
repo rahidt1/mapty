@@ -115,7 +115,14 @@ a:visited {
 .workout__title {
   font-size: 1.7rem;
   font-weight: 600;
-  grid-column: 1 / -1;
+  grid-column: 1 / -2;
+}
+.icon__trash {
+  width: 20px;
+  height: 20px;
+
+  grid-column: -2/-1;
+  justify-self: end;
 }
 
 .workout__details {

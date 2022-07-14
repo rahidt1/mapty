@@ -63,12 +63,14 @@ const inputDuration = document.querySelector('.form__input--duration');
 const inputCadence = document.querySelector('.form__input--cadence');
 const inputElevation = document.querySelector('.form__input--elevation');
 const reset = document.querySelector('.reset');
+const trash = document.querySelector('.icon__trash');
 
 class App {
   #map;
   #mapZoomLevel = 13;
   #mapEvent;
   #workout = [];
+  #marker = [];
 
   constructor() {
     // Get user's postion
@@ -80,8 +82,26 @@ class App {
     // Event Handlers
     form.addEventListener('submit', this._newWorkout.bind(this));
     inputType.addEventListener('change', this._toggleElevationField);
+    /*
+    containerWorkouts.addEventListener(
+      'click',
+      function (e) {
+        console.log(e.target);
+        console.log(this);
+        console.log(this.workout);
+        const trashBin = e.target.closest('.icon__trash');
+        if (!trashBin) this._moveToPopup(e);
+        else {
+          const workoutEl = e.target.closest('.workout');
+          if (!workoutEl) return;
+          this.trash(workoutEl.dataset.id);
+        }
+      }.bind(this)
+    );
+    */
     containerWorkouts.addEventListener('click', this._moveToPopup.bind(this));
     reset.addEventListener('click', this.reset);
+    // this.workout();
   }
 
   // Get position from GPS
@@ -110,6 +130,9 @@ class App {
 
     // Handling click on map
     this.#map.on('click', this._showForm.bind(this));
+
+    // Render Marker on current Position
+    this._renderCurrentWorkoutMarker([latitude, longitude]);
 
     // Render marker from local storage
     // See explanation at _getLocalStorage() method
@@ -215,8 +238,25 @@ class App {
     // Set local storage to all workouts
     this._setLocalStorage();
   }
+  _renderCurrentWorkoutMarker(position) {
+    L.marker(position)
+      .addTo(this.#map)
+      .bindPopup(
+        L.popup({
+          maxWidth: 250,
+          minWidht: 100,
+          autoClose: false,
+          closeOnClick: false,
+        })
+      )
+      .setPopupContent(`📍 Current Location`)
+      .openPopup();
+  }
   _renderWorkoutMarker(workout) {
-    L.marker(workout.coords)
+    const marker = L.marker(workout.coords);
+    this.#marker.push(marker);
+    // console.log(this.#marker);
+    marker
       .addTo(this.#map)
       .bindPopup(
         L.popup({
@@ -236,6 +276,7 @@ class App {
     let html = `
         <li class="workout workout--${workout.type}" data-id="${workout.id}">
           <h2 class="workout__title">${workout.description}</h2>
+          <ion-icon class="icon__trash" name="trash-outline"></ion-icon>
           <div class="workout__details">
             <span class="workout__icon">${
               workout.type === 'running' ? '🏃' : '🚴‍♀️'
@@ -282,32 +323,15 @@ class App {
     }
     form.insertAdjacentHTML('afterend', html);
   }
-  _moveToPopup(e) {
-    const workoutEl = e.target.closest('.workout');
 
-    if (!workoutEl) return;
-
-    const workout = this.#workout.find(
-      work => work.id === workoutEl.dataset.id
-    );
-
-    this.#map.setView(workout.coords, this.#mapZoomLevel, {
-      animate: true,
-      pan: {
-        duration: 1,
-      },
-    });
-
-    // Using public interface
-    // workout.click();
-  }
   _setLocalStorage() {
     localStorage.setItem('workouts', JSON.stringify(this.#workout));
   }
   _getLocalStorage() {
     const data = JSON.parse(localStorage.getItem('workouts'));
 
-    if (!data) return;
+    // If local storage is empty, then data would be null, but if local storage is empty array data would be true, hence checking both condition
+    if (!data || data.length === 0) return;
     // Reset button should be added if there is data during page load, unless it should be hidden
     reset.classList.remove('hidden');
 
@@ -327,12 +351,68 @@ class App {
       // setTimeout(() => this._renderWorkoutMarker(work), 1000);
     });
   }
+  // Move popup
+  _moveToPopup(e) {
+    const workoutEl = e.target.closest('.workout');
+    const trashEl = e.target.closest('.icon__trash');
+
+    if (trashEl) {
+      this.trash(workoutEl.dataset.id);
+    }
+
+    if (!workoutEl) return;
+
+    const workout = this.#workout.find(
+      work => work.id === workoutEl.dataset.id
+    );
+
+    this.#map.setView(workout.coords, this.#mapZoomLevel, {
+      animate: true,
+      pan: {
+        duration: 1,
+      },
+    });
+
+    // Using public interface
+    // workout.click();
+  }
+  // Delete Workout List + marker
+  trash(id) {
+    const removeEl = document.querySelector(`[data-id="${id}"]`);
+
+    this.#workout.forEach((work, i) => {
+      if (work.id === id) {
+        this.#workout.splice(i, 1);
+
+        // Remove marker from map
+        this.#marker[i].remove();
+
+        this.#marker.splice(i, 1);
+      }
+    });
+    // Remove workout from local storage
+    this._setLocalStorage();
+
+    // Remove workout list element from sidebar
+    removeEl.remove();
+
+    // If no workout left, rou
+    if (this.#workout.length === 0) {
+      reset.style.display = 'none';
+      this.reset();
+    }
+  }
 
   // Remove workout from local storage
   reset() {
     localStorage.removeItem('workouts');
     location.reload();
   }
+  /*
+  get workout() {
+    return this.#workout;
+  }
+  */
 }
 
 const app = new App();

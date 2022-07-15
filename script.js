@@ -1,14 +1,20 @@
 'use strict';
 
 class Workout {
-  date = new Date();
-  id = (Date.now() + ' ').slice(-10);
+  // Wrong: Data coming from local storage wont have previous unique id/date, it would have a newly generated id/date
+  // date = new Date();
+  // id = (Date.now() + ' ').slice(-10);
   clicks = 0;
 
-  constructor(coords, distance, duration) {
+  constructor(coords, distance, duration, id, date) {
     this.coords = coords; // [lat,lng]
     this.distance = distance; // in km
     this.duration = duration; // in min
+    this.id = id;
+    !id ? (this.id = (Date.now() + '').slice(-10)) : (this.id = id);
+
+    this.date = date;
+    !this.date ? (this.date = new Date()) : (this.date = new Date(`${date}`));
   }
 
   _setDescription() {
@@ -26,8 +32,8 @@ class Workout {
 class Running extends Workout {
   type = 'running';
 
-  constructor(coords, distance, duration, cadence) {
-    super(coords, distance, duration);
+  constructor(coords, distance, duration, cadence, id, date) {
+    super(coords, distance, duration, id, date);
     this.cadence = cadence;
     this.calcPace();
     // this.type = 'running';
@@ -41,8 +47,8 @@ class Running extends Workout {
 class Cycling extends Workout {
   type = 'cycling';
 
-  constructor(coords, distance, duration, elevationGain) {
-    super(coords, distance, duration);
+  constructor(coords, distance, duration, elevationGain, id, date) {
+    super(coords, distance, duration, id, date);
     this.elevationGain = elevationGain;
     this.calcSpeed();
     this._setDescription();
@@ -238,8 +244,8 @@ class App {
     // Set local storage to all workouts
     this._setLocalStorage();
   }
-  _renderCurrentWorkoutMarker(position) {
-    L.marker(position)
+  _renderCurrentWorkoutMarker(coords) {
+    L.marker(coords)
       .addTo(this.#map)
       .bindPopup(
         L.popup({
@@ -335,8 +341,37 @@ class App {
     // Reset button should be added if there is data during page load, unless it should be hidden
     reset.classList.remove('hidden');
 
-    this.#workout = data;
+    // Note: Doing this, cant restore prototype chain
+    // this.#workout = data;
 
+    // Restore prototype chain for running/cycling object, for data coming from local storage
+    data.forEach(workout => {
+      let workouts = {};
+
+      if (workout.type === 'running') {
+        workouts = new Running(
+          workout.coords,
+          workout.distance,
+          workout.duration,
+          workout.cadence,
+          workout.id,
+          workout.date
+        );
+      }
+      if (workout.type === 'cycling') {
+        workouts = new Cycling(
+          workout.coords,
+          workout.distance,
+          workout.duration,
+          workout.elevationGain,
+          workout.id,
+          workout.date
+        );
+      }
+      this.#workout.push(workouts);
+    });
+
+    // Render workout coming from local storage
     this.#workout.forEach(work => {
       this._renderWorkoutList(work);
       // Cant use, this.#map still not available
@@ -358,23 +393,23 @@ class App {
 
     if (trashEl) {
       this.trash(workoutEl.dataset.id);
+    } else {
+      if (!workoutEl) return;
+
+      const workout = this.#workout.find(
+        work => work.id === workoutEl.dataset.id
+      );
+
+      this.#map.setView(workout.coords, this.#mapZoomLevel, {
+        animate: true,
+        pan: {
+          duration: 1,
+        },
+      });
+      // Using public interface
+      // To demonstrate, data from local storage do not have prototype chain
+      workout.click();
     }
-
-    if (!workoutEl) return;
-
-    const workout = this.#workout.find(
-      work => work.id === workoutEl.dataset.id
-    );
-
-    this.#map.setView(workout.coords, this.#mapZoomLevel, {
-      animate: true,
-      pan: {
-        duration: 1,
-      },
-    });
-
-    // Using public interface
-    // workout.click();
   }
   // Delete Workout List + marker
   trash(id) {
@@ -408,11 +443,6 @@ class App {
     localStorage.removeItem('workouts');
     location.reload();
   }
-  /*
-  get workout() {
-    return this.#workout;
-  }
-  */
 }
 
 const app = new App();
